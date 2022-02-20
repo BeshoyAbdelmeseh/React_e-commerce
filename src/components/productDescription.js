@@ -1,5 +1,5 @@
-import React, {Component} from "react";
-import { Query, Field, client } from '@tilework/opus';
+import React, {Component, createRef} from "react";
+import { client } from '@tilework/opus';
 import { connect } from "react-redux";
 import { ProductDescriptionStyle } from "../styledComponents/productDescription.styled";
 import { setProducts } from "../redux/actions/products.actions";
@@ -7,9 +7,10 @@ import { addToCart } from "../redux/actions/cart.actions";
 import spinner from "../imgs/loading-spinner-final.svg";
 import { CenteredItem } from "../styledComponents/centeredItem.styled";
 import { ButtonStyle } from "../styledComponents/button.styled";
-import sanitizeHtml from "sanitize-html";
+import {sanitize} from "dompurify";
 import Attribute from "./attribute";
 import { AttributeDetailsStyle } from "../styledComponents/attribute.styled";
+import { getProductQuery } from "../queries/productQueries";
 
 class productDescription extends Component{
 
@@ -21,12 +22,16 @@ class productDescription extends Component{
         attributes: []
     }
 
-    componentDidMount(){
+    descriptionElement = createRef();
 
-        const cachedProduct = this.props.cachedProducts.filter(product => product.id === this.props.match.params.id);
+    async componentDidMount(){
+        const {match:{params: {id}}, cachedProducts, cacheProduct} = this.props;
+        
+        document.title = `${id.charAt(0).toUpperCase() + id.slice(1)}`;
+        const cachedProduct = cachedProducts.filter(product => product.id === id);
         if (cachedProduct.length > 0){
             let attributes = [];
-            cachedProduct[0].attributes.map(attribute => {
+            await cachedProduct[0].attributes.map(attribute => {
                 return(attributes.push({...attribute, selected: attribute.items[0].id}))
             })
             this.setState({ 
@@ -34,50 +39,39 @@ class productDescription extends Component{
                 isLoaded: true,
                 attributes: attributes,
             });
+            this.showSanitizedDescription();
         }
         else{
-            client.setEndpoint("http://localhost:4000");
-    
-            const query = new Query('product', true)
-                .addArgument('id', 'String!', this.props.match.params.id)
-                .addFieldList(['name', 'inStock', 'gallery', 'description', 'brand'])
-                .addField(new Field('attributes', true)
-                    .addFieldList(['id', 'name', 'type'])
-                    .addField(new Field('items', true)
-                        .addFieldList(['displayValue', 'value', 'id'])
-                    )
-                )
-                .addField(new Field('prices', true)
-                    .addFieldList(['amount'])
-                    .addField(new Field('currency', true)
-                        .addFieldList(['label'])
-                    )
-                )
-            client.post(query)
+            client.post(getProductQuery(id))
             .then(result => {
                 let attributes = [];
                 result.product.attributes.map(attribute => {
                     return(attributes.push({...attribute, selected: attribute.items[0].id}))
                 })
                 this.setState({ 
-                    product: {...result.product, id: this.props.match.params.id},
+                    product: {...result.product, id: id},
                     attributes: attributes,
                 });
-                const productToCache = {...result.product, id: this.props.match.params.id};
-                this.props.cacheProduct(productToCache);
+                const productToCache = {...result.product, id: id};
+                cacheProduct(productToCache);
                 }
             )
             .catch(err => this.setState({
                 hasError: true
             }))
-            .finally(() => this.setState({isLoaded: true}))
+            .finally(() => {
+                this.setState({isLoaded: true});
+                this.showSanitizedDescription();
+            })
         }
     }
 
     printCurrency(){
-        const price = this.state.product.prices.filter(price => price.currency.label === this.props.currencyLabel)[0].amount;
+        const {currencyLabel, currencySymbol} = this.props;
+
+        const price = this.state.product.prices.filter(price => price.currency.label === currencyLabel)[0].amount;
         return(
-            <>{this.props.currencySymbol}{price}</>
+            <>{currencySymbol}{price}</>
         )
     }
 
@@ -103,11 +97,9 @@ class productDescription extends Component{
         this.setState({attributes: newAttributes});
     }
 
-    spawnSanitizedDescription = () => {
-        const sanitizedDescription = sanitizeHtml(this.state.product.description);
-        return(
-            <div id="description" dangerouslySetInnerHTML={{__html: sanitizedDescription}}></div>
-        )
+    showSanitizedDescription = () => {
+        const sanitizedDescription = sanitize(this.state.product.description);
+        this.descriptionElement.current.innerHTML = sanitizedDescription
     }
 
     spawnDetails = () => {
@@ -135,14 +127,16 @@ class productDescription extends Component{
                 </div>: <ButtonStyle buttonType="red">
                         OUT OF STOCK
                     </ButtonStyle>}
-                {this.spawnSanitizedDescription()}
+                <div id="description" ref={this.descriptionElement}></div>
             </div>
         )
     }
 
     addToCart = () => {
+        const {addItemToCart} = this.props;
+
         const selectedAttributes = [];
-        this.state.attributes.map(attribute => {
+        this.state.attributes.map(attribute =>
             selectedAttributes.push({
                 id: attribute.id,
                 type: attribute.type,
@@ -150,7 +144,7 @@ class productDescription extends Component{
                 items: attribute.items,
                 selected: attribute.selected,
             })
-        })
+        )
         const specialId = `${this.state.product.id}_${selectedAttributes.map(attribute => `${attribute.id}_${attribute.selected}_`)}`;
         const product = {
             id: this.state.product.id,
@@ -161,7 +155,7 @@ class productDescription extends Component{
             attributes: selectedAttributes,
             specialId: specialId,
         }
-        this.props.addItemToCart(product);
+        addItemToCart(product);
     }
 
     showSpinner = () => {

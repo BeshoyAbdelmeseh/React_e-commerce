@@ -1,23 +1,27 @@
-import React, {Component} from "react";
+import React, {PureComponent} from "react";
 import { ProductItemStyled } from "../styledComponents/productItem.styled";
 import { connect } from "react-redux";
 import smallCart from "../imgs/small-cart.png"
 import { Link } from "react-router-dom";
 import { OutOfStock } from "../styledComponents/outOfStock.styled";
 
-class productItem extends Component{
+class productItem extends PureComponent{
 
     printCurrency(){
-        const price = this.props.prices.filter(price => price.currency.label === this.props.currencyLabel)[0].amount;
+        const {prices, currencyLabel, currencySymbol} = this.props;
+
+        const price = prices.filter(price => price.currency.label === currencyLabel)[0].amount;
         return(
-            <p><strong>{this.props.currencySymbol}{price}</strong></p>
+            <p><strong>{currencySymbol}{price}</strong></p>
         )
     }
 
     checkInStrock(){
-        if (this.props.inStock === false){
+        const {inStock, id} = this.props;
+        
+        if (inStock === false){
             return(
-                <Link to={"/product/" + this.props.id}>
+                <Link to={"/product/" + id}>
                     <OutOfStock >
                         <p>OUT OF STOCK</p>
                     </OutOfStock>
@@ -27,13 +31,15 @@ class productItem extends Component{
     }
 
     render(){
+        const {id, gallery, name, brand} = this.props;
+
         return(
             <ProductItemStyled>
-                <Link to={"/product/" + this.props.id}>
-                    <img src={this.props.gallery} alt="Item-Img"/>
+                <Link to={"/product/" + id}>
+                    <img src={gallery} alt="Item-Img"/>
                     <img id="cartImg" src={smallCart} alt="Cart-Img"/>
                 </Link>
-                <p>{this.props.brand + " " + this.props.name}</p>
+                <p>{brand + " " + name}</p>
                 {this.printCurrency()}
                 {this.checkInStrock()}
             </ProductItemStyled>

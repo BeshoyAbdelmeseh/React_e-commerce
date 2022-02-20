@@ -1,10 +1,11 @@
-import React, {Component} from "react";
-import { Query, Field, client } from '@tilework/opus';
+import React, {PureComponent} from "react";
+import { client } from '@tilework/opus';
 import spinner from "../imgs/loading-spinner-final.svg";
 import { CenteredItem } from "../styledComponents/centeredItem.styled";
 import ProductItem from "./productItem";
+import { getAllProductsQuery } from "../queries/productQueries";
 
-class productList extends Component{ 
+class productList extends PureComponent{ 
 
     state = {
         products: [],
@@ -17,28 +18,17 @@ class productList extends Component{
     }
 
     fetchProducts(){
-        client.setEndpoint("http://localhost:4000");
+        const {category} = this.props.match.params;
 
-        const query = new Query('category', true)
-            .addArgument('input', 'CategoryInput', {"title": this.props.match.params.category})
-            .addField(new Field('products', true)
-                .addFieldList(['id', 'name', 'inStock', 'gallery', 'brand'])
-                .addField(new Field('prices', true)
-                    .addFieldList(['amount'])
-                    .addField(new Field('currency', true)
-                        .addFieldList(['label'])
-                    )
-                )
-            )
-
-        client.post(query)
+        document.title = `${category.charAt(0).toUpperCase() + category.slice(1)}`;
+        client.post(getAllProductsQuery(category))
         .then(result => this.setState({
             products: result.category.products
         }))
         .catch(err => this.setState({
             hasError: true
         }))
-        .finally(() => this.setState({isLoaded: true}))
+        .finally(() => {this.setState({isLoaded: true})})
     }
 
     componentDidUpdate(prevProps) {
@@ -86,9 +76,11 @@ class productList extends Component{
     }
     
     render(){
+        const {category} = this.props.match.params;
+
         return(
             <div>
-                <h2 style={{color:"rgb(100, 100, 100)"}}>{this.props.match.params.category.toUpperCase()}</h2>
+                <h2 style={{color:"rgb(100, 100, 100)"}}>{category.toUpperCase()}</h2>
                 {this.state.isLoaded ? this.showProducts() : this.showSpinner()}
             </div>
         )

@@ -1,27 +1,23 @@
-import React, {Component} from "react";
+import React, {PureComponent} from "react";
 import { NavLink, Link } from "react-router-dom";
 import { NavbarStyle } from "../styledComponents/navbar.styled";
 import bagPic from "../imgs/bag-pic.png";
 import cartPic from "../imgs/cart-pic.png";
 import cartCircle from "../imgs/cart-circle.png";
-import { Query, client } from '@tilework/opus';
+import { client } from '@tilework/opus';
 import {setCurrency} from "../redux/actions/products.actions";
 import NavbarCart from "./navbarCart";
 import { connect } from "react-redux";
+import { getCurrenciesQuery } from '../queries/productQueries';
 
-class navbar extends Component{
+class navbar extends PureComponent{
 
     state = {
         currencies:[]
     }
 
     componentDidMount(){
-        client.setEndpoint("http://localhost:4000");
-
-        const query = new Query('currencies', true)
-                .addFieldList(['label', 'symbol'])
-
-        client.post(query)
+        client.post(getCurrenciesQuery)
         .then(result => this.setState({
             currencies: result.currencies
         }))
@@ -33,6 +29,8 @@ class navbar extends Component{
     }
 
     render(){
+        const {cartProducts, currencySymbol} = this.props;
+        
         return(
             <NavbarStyle>
                 <div id="main-div">
@@ -45,11 +43,11 @@ class navbar extends Component{
                     <ul>
                         <li>
                             <div className="currency-dropdown">
-                                <button className="currency-dropbtn">{this.props.currencySymbol}</button>
+                                <button className="currency-dropbtn">{currencySymbol}</button>
                                 <div className="currency-dropdown-content">
                                     {this.state.currencies.map(currency => {
                                         return(
-                                            <a href="#" key={currency.label} onClick={() => this.changeCurrency(currency)}>{currency.symbol} {currency.label}</a>
+                                            <a href={`#${currency.label}`} key={currency.label} onClick={() => this.changeCurrency(currency)}>{currency.symbol} {currency.label}</a>
                                         )
                                     })}
                                 </div>
@@ -58,7 +56,7 @@ class navbar extends Component{
                         <li>
                             <div className="cart-dropdown">
                                 <button className="cart-dropbtn"><img src={cartPic} alt="cartPic"/></button>
-                                {this.props.cartProducts.length > 0 ? <div id="cartCounter"><img src={cartCircle} alt="circle"/><span>{this.props.cartProducts.length}</span></div> : null}
+                                {cartProducts.length > 0 ? <div id="cartCounter"><img src={cartCircle} alt="circle"/><span>{cartProducts.length}</span></div> : null}
                                 <div className="cart-dropdown-content">
                                     <NavbarCart />
                                 </div>

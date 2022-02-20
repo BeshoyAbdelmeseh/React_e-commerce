@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { PureComponent } from "react";
 import { connect } from "react-redux";
 import { addToCart, removeFromCart } from "../redux/actions/cart.actions";
 import Attribute from "./attribute";
@@ -6,16 +6,23 @@ import { AttributeCartStyle } from "../styledComponents/attribute.styled";
 import { CenteredItem } from "../styledComponents/centeredItem.styled";
 import { CartStyle } from "../styledComponents/cart.styled";
 
-class Cart extends Component{
+class Cart extends PureComponent{
+
+    componentDidMount(){
+        document.title = `Cart`;
+    }
+
     spawnCartItems = () => {
+        const {cartProducts} = this.props;
+
         return(
             <>
                 <div id="itemsDiv">
-                    {this.props.cartProducts.map(product => {
+                    {cartProducts.map(product => {
                         return(
-                            <>
+                            <div key={product.specialId}>
                                 <hr/>
-                                <div key={product.specialId} className="itemContainer">
+                                <div className="itemContainer">
                                     <div className="details">
                                         <p>{product.brand}</p>
                                         <p>{product.name}</p>
@@ -36,7 +43,7 @@ class Cart extends Component{
                                         <img src={product.image} alt="itemImg"/>
                                     </div>
                                 </div>
-                            </>
+                            </div>
                         )
                     })}
                 </div>
@@ -49,12 +56,14 @@ class Cart extends Component{
     }
 
     printTotalPrice = () =>{
+        const {cartProducts , currencyLabel, currencySymbol} = this.props;
+
         let total = 0;
-        this.props.cartProducts.map(product => {
-            const price = product.prices.filter(price => price.currency.label === this.props.currencyLabel)[0].amount;
-            total += (product.count * price);
+        cartProducts.map(product => {
+            const price = product.prices.filter(price => price.currency.label === currencyLabel)[0].amount;
+            return total += (product.count * price);
         })
-        return(<p>{this.props.currencySymbol}{total.toFixed(2)}</p>)
+        return(<p>{currencySymbol}{total.toFixed(2)}</p>)
     }
 
     addProdcut = (product) => {
@@ -66,17 +75,20 @@ class Cart extends Component{
     }
 
     printCurrency = (prices) =>{
-        const price = prices.filter(price => price.currency.label === this.props.currencyLabel)[0].amount;
+        const {currencyLabel, currencySymbol} = this.props;
+
+        const price = prices.filter(price => price.currency.label === currencyLabel)[0].amount;
         return(
-            <p><strong>{this.props.currencySymbol}{price}</strong></p>
+            <p><strong>{currencySymbol}{price}</strong></p>
         )
     }
 
     render(){
+        const {cartProducts} = this.props;
         return(
             <CartStyle>
                 <div style={{color:"rgb(100, 100, 100)"}} id="titleDiv"><strong>CART</strong></div>
-                {this.props.cartProducts.length > 0 ? this.spawnCartItems() : <CenteredItem><p>Cart is empty.</p></CenteredItem>}
+                {cartProducts.length > 0 ? this.spawnCartItems() : <CenteredItem><p>Cart is empty.</p></CenteredItem>}
             </CartStyle>
         )
     }
